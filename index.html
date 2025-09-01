@@ -1,411 +1,136 @@
-<!--
-ARC — Anonymous Responsibility Council
-Single-file static site ready for GitHub Pages
-
-This file contains:
-  1) Full HTML/CSS/JS for a futuristic white + light-blue site
-  2) A Report form (can be anonymous) that posts to Formspree
-  3) A simple client-side "Council Chamber" (password-protected client-side) for members
-  4) An Announcements area for public posts
-  5) Embedded step-by-step setup instructions (below) so you can deploy on GitHub Pages
-
-IMPORTANT SETUP STEPS (read before deploying):
-1) Create a Formspree form (https://formspree.io/)
-   - Sign in and create a new form. Copy the endpoint URL; it looks like: https://formspree.io/f/abcd1234
-   - Replace the PLACEHOLDER_FORM_ENDPOINT value in the JS section of this file with that URL.
-   - Formspree will email submissions to the address you register. You can view them in Formspree dashboard or in your email.
-
-2) (Optional) To make member-only submissions viewable by members without using email:
-   - Use Formspree + forwarding to a shared mailbox the council controls.
-   - Or set up a Google Apps Script web app to receive form posts and write to a Google Sheet, then embed the sheet (or an admin-only view) into the Chamber. That requires separate setup and is described in the Chamber notes below.
-
-3) Create a new GitHub repository (e.g., "arc-site") and upload this file as index.html.
-   - On GitHub: Settings -> Pages -> Source: main branch / root -> Save. Your site will be at https://<yourusername>.github.io/arc-site/
-
-4) Security notes:
-   - This is a static site; any client-side password protection is *not secure against determined attackers*.
-   - For a school project, a simple client-side chamber password is fine for fun/roleplay. For real confidentiality, use a real backend and authenticated accounts.
-
--------------------------------------------
-Below is the single-file site. Edit the PLACEHOLDER_FORM_ENDPOINT in the JS (near the top) after you create your Formspree form.
--->
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>A.R.C. — Anonymous Responsibility Council</title>
-  <link rel="icon" href="data:,">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARC Council</title>
   <style>
-    :root{
-      --bg1:#ffffff;
-      --bg2:#eaf8ff;
-      --accent:#00a0ff;
-      --accent-2:#70c8ff;
-      --muted:#9bbcd6;
-      --card:#ffffff;
-      --glass: rgba(255,255,255,0.7);
-      --radius:18px;
-      --shadow: 0 10px 30px rgba(2,50,90,0.06);
-      --mono: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+    /* General Styles */
+    body {
+      margin: 0;
+      font-family: 'Courier New', monospace;
+      background-color: #0a0a0a;
+      color: #e60000;
+      overflow-x: hidden;
     }
-    html,body{height:100%;margin:0;font-family:var(--mono);background:linear-gradient(135deg,var(--bg2),var(--bg1));color:#0b2536}
-    .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:40px}
-    .card{width:980px;border-radius:var(--radius);box-shadow:var(--shadow);background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(250,255,ff,0.9));overflow:hidden;display:grid;grid-template-columns:380px 1fr}
-    /* left panel (branding + nav) */
-    .left{background:linear-gradient(135deg,rgba(6,114,185,0.95), rgba(0,160,255,0.95));color:white;padding:36px;display:flex;flex-direction:column;gap:18px}
-    .logo{display:flex;align-items:center;gap:14px}
-    .logo .shield{width:60px;height:60px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06));display:flex;align-items:center;justify-content:center;box-shadow:inset 0 -6px 18px rgba(0,0,0,0.12)}
-    .logo h1{margin:0;font-size:20px;letter-spacing:1px}
-    .logo p{margin:0;font-size:12px;opacity:0.9}
-    nav{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-    .nav-btn{background:transparent;border:0;color:rgba(255,255,255,0.95);text-align:left;padding:10px;border-radius:10px;cursor:pointer;font-weight:600}
-    .nav-btn:hover{background:rgba(255,255,255,0.06)}
-    .small{opacity:0.85;font-size:13px}
-    .muted{opacity:0.85}
 
-    /* right panel */
-    .right{padding:36px;background:linear-gradient(180deg, rgba(250,255,255,0.6), rgba(245,255,255,0.95))}
-    .section{display:none}
-    .section.active{display:block}
+    h1, h2, h3, p, label {
+      color: #e60000;
+      text-shadow: 0 0 8px #900;
+    }
 
-    /* form styles */
-    .form{max-width:560px}
-    input[type=text],input[type=email],select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #d9eefc;background:white;font-size:14px;box-sizing:border-box}
-    textarea{resize:vertical}
-    .row{display:flex;gap:12px}
-    .row .col{flex:1}
-    .button{display:inline-block;padding:12px 18px;border-radius:12px;background:var(--accent);color:white;border:0;font-weight:700;cursor:pointer}
-    .ghost{background:transparent;color:var(--accent);border:1px solid rgba(0,160,255,0.18)}
+    a {
+      color: #e60000;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
 
-    .meta{margin-top:8px;color:var(--muted);font-size:13px}
+    /* Header Animation */
+    .intro-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      animation: fadeOut 3s forwards;
+      animation-delay: 2s;
+    }
 
-    .ann-list{display:flex;flex-direction:column;gap:12px}
-    .ann{background:linear-gradient(180deg, rgba(255,255,255,0.7), rgba(245,255,255,0.95));padding:12px;border-radius:10px;border:1px solid rgba(0,160,255,0.06)}
+    .intro-text {
+      font-size: 2em;
+      color: #e60000;
+      text-shadow: 0 0 12px #ff0000;
+      animation: flicker 1.5s infinite;
+    }
 
-    /* chamber */
-    .chamber{max-width:700px}
-    .admin-note{background:#f3fbff;padding:10px;border-radius:8px;border:1px solid rgba(0,160,255,0.06)}
+    @keyframes fadeOut {
+      to { opacity: 0; visibility: hidden; }
+    }
 
-    footer{margin-top:18px;font-size:13px;color:var(--muted)}
+    @keyframes flicker {
+      0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+        opacity: 1;
+      }
+      20%, 24%, 55% {
+        opacity: 0.3;
+      }
+    }
 
-    @media (max-width:980px){
-      .card{grid-template-columns:1fr; width:100%;}
-      .left{order:2}
-      .right{order:1}
+    /* Main Container */
+    .container {
+      max-width: 800px;
+      margin: 100px auto;
+      padding: 20px;
+      background: rgba(20, 0, 0, 0.85);
+      border-radius: 10px;
+      box-shadow: 0 0 20px #900;
+      animation: fadeIn 2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    input, textarea, button {
+      padding: 10px;
+      font-family: 'Courier New', monospace;
+      border: 1px solid #e60000;
+      border-radius: 5px;
+      background: black;
+      color: #e60000;
+    }
+
+    button {
+      cursor: pointer;
+      background: #e60000;
+      color: black;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #900;
+      color: #fff;
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="left">
-        <div class="logo">
-          <div class="shield">
-            <!-- simple SVG eye/shield -->
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4c4 0 7.5 2.7 9 6-1.5 3.3-5 6-9 6s-7.5-2.7-9-6c1.5-3.3 5-6 9-6z" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10.8" r="2.8" stroke="white" stroke-width="1.2"/></svg>
-          </div>
-          <div>
-            <h1>A.R.C.</h1>
-            <p class="small">Anonymous Responsibility Council</p>
-          </div>
-        </div>
-
-        <nav>
-          <button class="nav-btn" data-target="home">Entry Chamber</button>
-          <button class="nav-btn" data-target="report">Report (Anonymous Tip)</button>
-          <button class="nav-btn" data-target="announcements">Announcements</button>
-          <button class="nav-btn" data-target="chamber">Council Chamber</button>
-        </nav>
-
-        <div style="margin-top:auto">
-          <div class="small muted">Motto</div>
-          <div style="font-weight:700">"What the halls hide, we reveal."</div>
-          <div style="height:8px"></div>
-          <div class="small muted">Deploy to GitHub Pages for a public site or run locally for testing.</div>
-        </div>
-      </div>
-
-      <div class="right">
-        <!-- HOME -->
-        <section id="home" class="section active">
-          <h2>Welcome to the Council</h2>
-          <p class="meta">State your case. The council reviews anonymous reports and helps bring issues to attention when school channels fall short.</p>
-
-          <div style="margin-top:18px;display:flex;gap:12px;align-items:center">
-            <button class="button" data-action="openReport">Submit a Report</button>
-            <button class="ghost" data-action="openChamber">Members Sign-in</button>
-          </div>
-
-          <h3 style="margin-top:24px">How it works</h3>
-          <ol>
-            <li>Students submit reports (name optional). Reports go to the council's email (via Formspree).</li>
-            <li>Council reviews reports in the Chamber and decides actions: awareness posts, mediation, or private escalation to staff.</li>
-            <li>Arc releases public announcements or guidance when appropriate.</li>
-          </ol>
-
-          <div class="meta">Tip: Encourage students to use details and avoid naming private medical or legal issues that require staff involvement.</div>
-        </section>
-
-        <!-- REPORT -->
-        <section id="report" class="section">
-          <h2>Anonymous Tip Box</h2>
-          <p class="meta">You may leave your name (optional). If you want ARC to contact you, leave an email.</p>
-
-          <form class="form" id="reportForm">
-            <div class="row">
-              <div class="col"><input type="text" id="first" placeholder="First name (optional)"></div>
-              <div class="col"><input type="text" id="last" placeholder="Last name (optional)"></div>
-            </div>
-            <input type="email" id="email" placeholder="Email (optional)">
-            <select id="category">
-              <option value="general">General Concern</option>
-              <option value="harassment">Harassment / Bullying</option>
-              <option value="safety">Safety / Threat</option>
-              <option value="theft">Theft / Property</option>
-              <option value="other">Other</option>
-            </select>
-            <textarea id="message" rows="5" placeholder="Describe the issue in detail" required></textarea>
-            <div style="display:flex;gap:12px;align-items:center;margin-top:12px">
-              <button type="submit" class="button">Submit</button>
-              <button type="button" class="ghost" id="clearBtn">Clear</button>
-            </div>
-            <div id="formNote" class="meta" style="margin-top:10px">Submissions are forwarded to ARC's email. Abuse of the form may be logged.</div>
-          </form>
-        </section>
-
-        <!-- ANNOUNCEMENTS -->
-        <section id="announcements" class="section">
-          <h2>Announcements</h2>
-          <p class="meta">Public posts from the Council. Keep them short, supportive, and non-accusatory.</p>
-          <div class="ann-list" id="annList">
-            <!-- sample announcements -->
-            <div class="ann"><strong>Notice:</strong> ARC reminds students: look out for each other — report bullying.</div>
-            <div class="ann"><strong>Mission:</strong> Eyes open, voices kind. This week, ARC will host a conflict resolution workshop.</div>
-          </div>
-
-          <footer>To post announcements from the Chamber: members can prepare messages in the Chamber and paste them here via the Members UI.</footer>
-        </section>
-
-        <!-- CHAMBER (members-only) -->
-        <section id="chamber" class="section">
-          <h2>Council Chamber</h2>
-          <p class="meta">Members only. Enter the chamber password to access member tools.</p>
-
-          <div id="chamberLogin" style="max-width:480px">
-            <input type="password" id="chamberPass" placeholder="Chamber password">
-            <div style="height:12px"></div>
-            <button class="button" id="enterChamber">Enter Chamber</button>
-            <div class="meta" style="margin-top:10px">Note: This is client-side protection (obfuscation). For confidentiality, use an authenticated backend.</div>
-          </div>
-
-          <div id="chamberArea" style="display:none;margin-top:12px" class="chamber">
-            <div class="admin-note">Welcome, Council member. You can view guidance, copy announcement drafts, and find setup notes to connect form submissions to a shared inbox.</div>
-
-            <h3 style="margin-top:14px">Member Tools</h3>
-            <div style="display:flex;gap:12px;flex-wrap:wrap">
-              <button class="button" id="openInbox">Open Submission Inbox (Formspree)</button>
-              <button class="ghost" id="newAnn">Create Announcement</button>
-            </div>
-
-            <div id="annEditor" style="display:none;margin-top:12px">
-              <input id="annTitle" placeholder="Short title (e.g., Notice: Respect in Halls)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d9eefc">
-              <textarea id="annBody" rows="4" placeholder="Announcement text" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d9eefc;margin-top:8px"></textarea>
-              <div style="display:flex;gap:8px;margin-top:8px">
-                <button class="button" id="publishAnn">Publish to Announcements</button>
-                <button class="ghost" id="cancelAnn">Cancel</button>
-              </div>
-            </div>
-
-            <h4 style="margin-top:18px">Setup notes for viewing submissions</h4>
-            <ol>
-              <li>Formspree will email each submission to the address you set. Use a shared council email (recommended).</li>
-              <li>If you want a web inbox: forward Formspree emails to a Google account and use a Google Apps Script to write them into a Sheet. Then you can embed or link the sheet here (advanced setup).</li>
-              <li>To keep things tidy, create a label/folder in your mail for "ARC Submissions."</li>
-            </ol>
-
-            <div style="margin-top:18px" class="meta">Chamber password controls: To change the password, edit the JavaScript constant CHAMBER_PASSWORD_HASH inside this file (you'll need to generate a SHA-256 hash and paste it). For now, a default passphrase is present so you can test locally.</div>
-
-          </div>
-        </section>
-
-      </div>
-    </div>
+  <!-- Intro Screen -->
+  <div class="intro-screen">
+    <div class="intro-text">ACCESSING ARC COUNCIL...</div>
   </div>
 
-  <script>
-    /*******************************************************************
-     * CONFIG (Edit these before deploying)
-     *******************************************************************/
-    // Replace this with your Formspree form endpoint (create a form on formspree.io)
-    const FORM_ENDPOINT = "https://formspree.io/f/PLACEHOLDER_FORM_ENDPOINT";
+  <!-- Main Content -->
+  <div class="container">
+    <h1>ARC COUNCIL</h1>
+    <p>Welcome to the Council of Justice. State your case below:</p>
 
-    // ----- Chamber password (client-side) -----
-    // For a simple test password, set PASS_TEST to a plain string. For slightly better obscurity,
-    // replace CHAMBER_PASSWORD_HASH with a SHA-256 hex digest of the password you choose.
-    // Keep in mind: this is client-side; anyone can read the JS if they inspect the page.
+    <form action="https://formspree.io/f/your-endpoint" method="POST">
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" placeholder="Your name" required>
 
-    const PASS_TEST = "arc-secret"; // change this for your test runs
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" placeholder="Your email" required>
 
-    // A precomputed SHA-256 hash of PASS_TEST. If you change PASS_TEST, update the hash.
-    // Default hash for "arc-secret":
-    const CHAMBER_PASSWORD_HASH = "1f7f9a6d1c3c7f8b9a2e7b6c5d4f3a2b4c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0"; // <-- replace with real hash or remove
+      <label for="message">Your Message</label>
+      <textarea id="message" name="message" rows="5" placeholder="Type your message here..." required></textarea>
 
-    /*******************************************************************
-     * End CONFIG
-     *******************************************************************/
-
-    // Simple in-page router
-    document.querySelectorAll('.nav-btn').forEach(btn=>{
-      btn.addEventListener('click', e=>{
-        const t = btn.dataset.target;
-        document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-        document.getElementById(t).classList.add('active');
-      })
-    })
-
-    // buttons on home
-    document.querySelector('[data-action="openReport"]').addEventListener('click', ()=>{
-      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-      document.getElementById('report').classList.add('active');
-    })
-    document.querySelector('[data-action="openChamber"]').addEventListener('click', ()=>{
-      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-      document.getElementById('chamber').classList.add('active');
-    })
-
-    // Report form handling: post to Formspree endpoint via fetch so we can show a proper thank-you state
-    const reportForm = document.getElementById('reportForm');
-    reportForm.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const first = document.getElementById('first').value.trim();
-      const last = document.getElementById('last').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const category = document.getElementById('category').value;
-      const message = document.getElementById('message').value.trim();
-      if(!message){alert('Please describe the issue.');return}
-
-      const payload = {
-        'first_name': first,
-        'last_name': last,
-        'email': email,
-        'category': category,
-        'message': message
-      };
-
-      try{
-        const res = await fetch(FORM_ENDPOINT, {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
-        });
-        if(res.ok){
-          showThanks();
-          reportForm.reset();
-        } else {
-          // fallback: try urlencoded form post
-          const formData = new URLSearchParams();
-          Object.keys(payload).forEach(k => formData.append(k, payload[k]));
-          const r2 = await fetch(FORM_ENDPOINT, {method:'POST',body: formData});
-          if(r2.ok) { showThanks(); reportForm.reset(); }
-          else throw new Error('Submission failed');
-        }
-      } catch(err){
-        alert('Submission failed. Make sure you set up your Formspree endpoint in the file.');
-        console.error(err);
-      }
-    });
-
-    function showThanks(){
-      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-      const t = document.createElement('div');
-      t.innerHTML = '<h2>Thanks — report received</h2><p class="meta">The Council will review your message. If you left an email, we may contact you for details.</p><div style="height:12px"></div><button class="button" onclick="location.href='/'">Return Home</button>';
-      t.className = 'section active';
-      const right = document.querySelector('.right');
-      // remove existing displayed section and append temp
-      right.innerHTML = '';
-      right.appendChild(t);
-    }
-
-    document.getElementById('clearBtn').addEventListener('click', ()=>{
-      reportForm.reset();
-    });
-
-    // Chamber login logic (simple client-side check)
-    document.getElementById('enterChamber').addEventListener('click', ()=>{
-      const pass = document.getElementById('chamberPass').value || '';
-      // quick test: if it matches PASS_TEST, allow. Otherwise, hash compare if CHAMBER_PASSWORD_HASH used.
-      if(pass === PASS_TEST){ enterChamberUI(); return; }
-      // if a hash is provided, verify via subtle crypto
-      if(window.crypto && CHAMBER_PASSWORD_HASH && CHAMBER_PASSWORD_HASH.length>10){
-        hashString(pass).then(h=>{
-          if(h === CHAMBER_PASSWORD_HASH){ enterChamberUI(); }
-          else alert('Incorrect chamber password.');
-        })
-      } else {
-        alert('Incorrect chamber password.');
-      }
-    });
-
-    function enterChamberUI(){
-      document.getElementById('chamberLogin').style.display = 'none';
-      document.getElementById('chamberArea').style.display = 'block';
-    }
-
-    async function hashString(str){
-      const enc = new TextEncoder();
-      const data = enc.encode(str);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
-      return hashHex;
-    }
-
-    // Member tools
-    document.getElementById('openInbox').addEventListener('click', ()=>{
-      // open Formspree dashboard - user will log in
-      window.open('https://formspree.io/dashboard');
-    });
-
-    document.getElementById('newAnn').addEventListener('click', ()=>{
-      document.getElementById('annEditor').style.display = 'block';
-    });
-    document.getElementById('cancelAnn').addEventListener('click', ()=>{
-      document.getElementById('annEditor').style.display = 'none';
-    });
-    document.getElementById('publishAnn').addEventListener('click', ()=>{
-      const t = document.getElementById('annTitle').value.trim();
-      const b = document.getElementById('annBody').value.trim();
-      if(!b){ alert('Write an announcement message'); return; }
-      const el = document.createElement('div'); el.className='ann'; el.innerHTML = (t?('<strong>'+escapeHtml(t)+'</strong> ':'') + escapeHtml(b));
-      document.getElementById('annList').prepend(el);
-      // clear editor
-      document.getElementById('annTitle').value=''; document.getElementById('annBody').value=''; document.getElementById('annEditor').style.display='none';
-      alert('Announcement published to public feed');
-    });
-
-    function escapeHtml(s){ return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
-
-    // small UX: clicking nav shows correct section and restores right panel content when needed
-    document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click', ()=>{
-      // on switching to chamber, ensure initial login view
-      if(btn.dataset.target === 'chamber'){
-        // rebuild right side content from original HTML by reloading page fragment
-        location.hash = '#chamber';
-        // nothing else needed — this static file handles it.
-      }
-    }));
-
-    // Useful: allow deep-linking via hash
-    (function(){
-      const h = location.hash.replace('#','');
-      if(h){
-        const sec = document.getElementById(h);
-        if(sec){ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); sec.classList.add('active'); }
-      }
-    })();
-
-  </script>
+      <button type="submit">Transmit</button>
+    </form>
+  </div>
 </body>
 </html>
